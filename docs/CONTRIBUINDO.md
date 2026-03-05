@@ -502,7 +502,7 @@ Qualquer informação relevante.
 
 - **Issues:** Para bugs e features
 - **Discussions:** Para perguntas
-- **Email:** contato@datalibros.com (futuro)
+- **GitHub:** github.com/nantycampos/dataLivros
 
 ## ✅ Checklist Final
 

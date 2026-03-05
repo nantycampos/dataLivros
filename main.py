@@ -22,6 +22,11 @@ class DataLivrosController:
         self.livro_selecionado: Optional[Dict] = None
         self.leitor_selecionado: Optional[Dict] = None
         self.livros_api_resultados: list = []  # Armazena resultados da API
+        self.livros_circulacao_resultados: list = []  # Armazena resultados de busca de livros disponíveis
+        
+        # Controle de modo de edição
+        self.editando_livro_id: Optional[int] = None  # ID do livro em edição (None = novo)
+        self.editando_leitor_id: Optional[int] = None  # ID do leitor em edição (None = novo)
         
         self._configurar_eventos()
         self._foco_inicial()
@@ -41,6 +46,8 @@ class DataLivrosController:
         # --- EVENTOS DA ABA CIRCULAÇÃO ---
         self.frame.vincular_evento(aba_circ.btn_buscar_livro, wx.EVT_BUTTON, 
                                    self._on_buscar_livro_circulacao)
+        self.frame.vincular_evento(aba_circ.lista_resultados_livro, wx.EVT_LISTBOX,
+                                   self._on_selecionar_livro_circulacao)
         self.frame.vincular_evento(aba_circ.texto_busca_leitor, wx.EVT_TEXT, 
                                    self._on_filtrar_leitores)
         self.frame.vincular_evento(aba_circ.btn_emprestar, wx.EVT_BUTTON, 
@@ -55,12 +62,16 @@ class DataLivrosController:
                                    self._on_selecionar_resultado_api)
         self.frame.vincular_evento(aba_cad.btn_salvar, wx.EVT_BUTTON, 
                                    self._on_salvar_livro)
+        self.frame.vincular_evento(aba_cad.btn_editar, wx.EVT_BUTTON, 
+                                   self._on_editar_livro)
         self.frame.vincular_evento(aba_cad.btn_limpar, wx.EVT_BUTTON, 
                                    self._on_limpar_campos_cadastro)
         
         # --- EVENTOS DA ABA LEITORES ---
         self.frame.vincular_evento(aba_leit.btn_salvar_leitor, wx.EVT_BUTTON, 
                                    self._on_salvar_leitor)
+        self.frame.vincular_evento(aba_leit.btn_editar_leitor, wx.EVT_BUTTON,
+                                   self._on_editar_leitor)
         self.frame.vincular_evento(aba_leit.texto_busca_leitor_list, wx.EVT_TEXT, 
                                    self._on_filtrar_lista_leitores)
         self.frame.vincular_evento(aba_leit.btn_detalhes_leitor, wx.EVT_BUTTON, 
@@ -75,7 +86,7 @@ class DataLivrosController:
     # ========== EVENTOS DA ABA CIRCULAÇÃO ==========
     
     def _on_buscar_livro_circulacao(self, event):
-        """Evento: Busca livro na aba Circulação."""
+        """Evento: Busca livros na aba Circulação e popula ListBox de resultados."""
         aba_circ = self.frame.get_aba_circulacao()
         isbn_titulo = aba_circ.texto_busca_livro.GetValue().strip()
         
@@ -84,21 +95,74 @@ class DataLivrosController:
             wx.Bell()
             return
         
-        # Buscar no banco local primeiro
+        # Buscar no banco local primeiro por ISBN
         livro = self.db.buscar_livro_por_isbn(isbn_titulo)
         
-        if not livro:
-            # Buscar por título
+        livros_encontrados = []
+        if livro and livro.get('status') == 'Disponível':
+            livros_encontrados = [livro]
+        
+        # Se não encontrou por ISBN, buscar por título com status Disponível
+        if not livros_encontrados:
             livros = self.db.buscar_livros_por_titulo(isbn_titulo)
-            if livros:
-                livro = livros[0]
+            livros_encontrados = [l for l in livros if l.get('status') == 'Disponível']
+        
+        # Popula a ListBox com resultados
+        self._atualizar_lista_resultados_livro(livros_encontrados)
+    
+    def _atualizar_lista_resultados_livro(self, livros: list):
+        """Atualiza a ListBox com resultados de busca de livros disponíveis."""
+        aba_circ = self.frame.get_aba_circulacao()
+        self.livros_circulacao_resultados = livros  # Armazenar para referência posterior
+        
+        aba_circ.lista_resultados_livro.Clear()
+        
+        if not livros:
+            self.frame.atualizar_status("Nenhum livro disponível encontrado.")
+            wx.Bell()
+            return
+        
+        for livro in livros:
+            titulo = livro.get('titulo', 'Sem título')
+            autores = livro.get('autores', 'Autor desconhecido')
+            quantidade_total = livro.get('quantidade_total', 1)
+            emprestimos_ativos = self.db.contar_emprestimos_ativos_livro(livro['id'])
+            quantidade_disponivel = quantidade_total - emprestimos_ativos
+            
+            label = f"{titulo} - {autores} [{quantidade_disponivel} disponíveis]"
+            aba_circ.lista_resultados_livro.Append(label, livro['id'])
+        
+        self.frame.atualizar_status(f"Encontrados {len(livros)} livro(s) disponível(is).")
+        aba_circ.lista_resultados_livro.SetFocus()
+        
+        # Anúncio para NVDA
+        wx.SafeYield()
+    
+    def _on_selecionar_livro_circulacao(self, event):
+        """Evento: Seleciona um livro da lista de resultados."""
+        aba_circ = self.frame.get_aba_circulacao()
+        
+        selecionado = aba_circ.lista_resultados_livro.GetSelection()
+        if selecionado == wx.NOT_FOUND:
+            self.frame.atualizar_status("Nenhum livro selecionado.")
+            return
+        
+        livro_id = aba_circ.lista_resultados_livro.GetClientData(selecionado)
+        livro = self.db.buscar_livro_por_id(livro_id)
         
         if livro:
             self.livro_selecionado = livro
-            mensagem = f"Livro encontrado: {livro['titulo']} ({livro['autores']})"
-            self.frame.atualizar_status(mensagem)
+            titulo = livro.get('titulo', 'Sem título')
+            quantidade_total = livro.get('quantidade_total', 1)
+            emprestimos_ativos = self.db.contar_emprestimos_ativos_livro(livro['id'])
+            quantidade_disponivel = quantidade_total - emprestimos_ativos
+            
+            # Anúncio claro da quantidade disponível para NVDA
+            msg_status = f"Livro: {titulo} - {quantidade_disponivel} exemplar(es) disponível(is) de {quantidade_total}"
+            self.frame.atualizar_status(msg_status)
+            # O botão emprestar agora será habilitado
         else:
-            self.frame.atualizar_status(f"Livro não encontrado no acervo. Cadastre o livro primeiro.")
+            self.frame.atualizar_status("Erro ao carregar livro.")
             wx.Bell()
     
     def _on_filtrar_leitores(self, event):
@@ -131,6 +195,17 @@ class DataLivrosController:
         
         if not self.livro_selecionado:
             self.frame.atualizar_status("Erro: Selecione um livro primeiro.")
+            wx.Bell()
+            return
+        
+        # Validar se há exemplares disponíveis
+        quantidade_total = self.livro_selecionado.get('quantidade_total', 1)
+        emprestimos_ativos = self.db.contar_emprestimos_ativos_livro(self.livro_selecionado['id'])
+        quantidade_disponivel = quantidade_total - emprestimos_ativos
+        
+        if quantidade_disponivel <= 0:
+            titulo = self.livro_selecionado.get('titulo', 'Livro desconhecido')
+            self.frame.atualizar_status(f"Erro: Todos os exemplares de '{titulo}' estão emprestados.")
             wx.Bell()
             return
         
@@ -178,11 +253,17 @@ class DataLivrosController:
             wx.Bell()
             return
         
-        # Aqui você precisaria manter uma referência dos IDs dos empréstimos
-        # Por enquanto, vamos usar um índice simplificado
         try:
-            self.frame.atualizar_status("Devolução registrada com sucesso.")
-            self._atualizar_lista_emprestimos()
+            # Obter ID do empréstimo selecionado
+            emprestimo_id = aba_circ.lista_emprestimos.GetClientData(selecionado)
+            
+            # Registrar devolução no banco
+            if self.db.registrar_devolucao(emprestimo_id):
+                self.frame.atualizar_status("Livro devolvido com sucesso.")
+                self._atualizar_lista_emprestimos()
+            else:
+                self.frame.atualizar_status("Erro: Não foi possível registrar a devolução.")
+                wx.Bell()
         except Exception as e:
             self.frame.atualizar_status(f"Erro ao registrar devolução: {str(e)}")
             wx.Bell()
@@ -290,18 +371,43 @@ class DataLivrosController:
             ano_publicacao = int(ano_str) if ano_str else None
             descricao = aba_cad.texto_descricao.GetValue().strip() or None
             categorias = aba_cad.texto_categorias.GetValue().strip() or None
+            quantidade_total = aba_cad.texto_quantidade.GetValue()
             
-            livro_id = self.db.adicionar_livro(
-                titulo=titulo,
-                isbn=isbn,
-                autores=autores,
-                editora=editora,
-                ano_publicacao=ano_publicacao,
-                descricao=descricao,
-                categorias=categorias
-            )
+            # Verificar se estamos editando ou criando novo livro
+            if self.editando_livro_id is not None:
+                # Modo de edição: atualizar livro existente
+                self.db.atualizar_livro(
+                    id=self.editando_livro_id,
+                    titulo=titulo,
+                    isbn=isbn,
+                    autores=autores,
+                    editora=editora,
+                    ano_publicacao=ano_publicacao,
+                    descricao=descricao,
+                    categorias=categorias,
+                    quantidade_total=quantidade_total
+                )
+                
+                self.frame.atualizar_status(f"Livro '{titulo}' atualizado com sucesso!")
+                
+                # Limpar modo de edição
+                self.editando_livro_id = None
+                aba_cad.btn_salvar.SetLabel("Salvar Livro")
+            else:
+                # Modo de criação: adicionar novo livro
+                livro_id = self.db.adicionar_livro(
+                    titulo=titulo,
+                    isbn=isbn,
+                    autores=autores,
+                    editora=editora,
+                    ano_publicacao=ano_publicacao,
+                    descricao=descricao,
+                    categorias=categorias,
+                    quantidade_total=quantidade_total
+                )
+                
+                self.frame.atualizar_status(f"Livro salvo com sucesso! ID: {livro_id}")
             
-            self.frame.atualizar_status(f"Livro salvo com sucesso! ID: {livro_id}")
             self._on_limpar_campos_cadastro(None)
             
         except ValueError:
@@ -312,7 +418,7 @@ class DataLivrosController:
             wx.Bell()
     
     def _on_limpar_campos_cadastro(self, event):
-        """Evento: Limpa os campos da aba Cadastro."""
+        """Evento: Limpa os campos da aba Cadastro e cancela modo de edição."""
         aba_cad = self.frame.get_aba_cadastro()
         
         aba_cad.texto_busca_api.SetValue('')
@@ -323,14 +429,22 @@ class DataLivrosController:
         aba_cad.texto_ano.SetValue('')
         aba_cad.texto_descricao.SetValue('')
         aba_cad.texto_categorias.SetValue('')
+        aba_cad.texto_quantidade.SetValue(1)
         
-        self.frame.atualizar_status("Campos limpos.")
+        # Cancelar modo de edição se ativo
+        if self.editando_livro_id is not None:
+            self.editando_livro_id = None
+            aba_cad.btn_salvar.SetLabel("Salvar Livro")
+            self.frame.atualizar_status("Edição cancelada.")
+        else:
+            self.frame.atualizar_status("Campos limpos.")
+        
         aba_cad.texto_busca_api.SetFocus()
     
     # ========== EVENTOS DA ABA LEITORES ==========
     
     def _on_salvar_leitor(self, event):
-        """Evento: Salva um novo leitor."""
+        """Evento: Salva ou atualiza um leitor."""
         aba_leit = self.frame.get_aba_leitores()
         
         nome = aba_leit.texto_nome.GetValue().strip()
@@ -340,24 +454,34 @@ class DataLivrosController:
             return
         
         try:
-            email = aba_leit.texto_email.GetValue().strip() or None
-            telefone = aba_leit.texto_telefone.GetValue().strip() or None
-            endereco = aba_leit.texto_endereco.GetValue().strip() or None
+            turma = aba_leit.texto_turma.GetValue().strip() or None
             
-            leitor_id = self.db.adicionar_leitor(
-                nome=nome,
-                email=email,
-                telefone=telefone,
-                endereco=endereco
-            )
-            
-            self.frame.atualizar_status(f"Leitor salvo com sucesso! ID: {leitor_id}")
+            # Verificar se estamos editando ou criando novo leitor
+            if self.editando_leitor_id is not None:
+                # Modo de edição: atualizar leitor existente
+                self.db.atualizar_leitor(
+                    id=self.editando_leitor_id,
+                    nome=nome,
+                    turma=turma
+                )
+                
+                self.frame.atualizar_status(f"Leitor '{nome}' atualizado com sucesso!")
+                
+                # Limpar modo de edição
+                self.editando_leitor_id = None
+                aba_leit.btn_salvar_leitor.SetLabel("Salvar Leitor")
+            else:
+                # Modo de criação: adicionar novo leitor
+                leitor_id = self.db.adicionar_leitor(
+                    nome=nome,
+                    turma=turma
+                )
+                
+                self.frame.atualizar_status(f"Leitor salvo com sucesso! ID: {leitor_id}")
             
             # Limpar campos
             aba_leit.texto_nome.SetValue('')
-            aba_leit.texto_email.SetValue('')
-            aba_leit.texto_telefone.SetValue('')
-            aba_leit.texto_endereco.SetValue('')
+            aba_leit.texto_turma.SetValue('')
             
             # Atualizar lista
             self._atualizar_lista_leitores('')
@@ -385,7 +509,8 @@ class DataLivrosController:
         
         aba_leit.lista_leitores.Clear()
         for leitor in leitores:
-            label = f"{leitor['nome']} - {leitor['email'] or 'Sem email'} (ID: {leitor['id']})"
+            turma_info = f" ({leitor['turma']})" if leitor.get('turma') else ""
+            label = f"{leitor['nome']}{turma_info} - ID: {leitor['id']}"
             aba_leit.lista_leitores.Append(label, leitor['id'])
         
         if leitores:
@@ -407,8 +532,101 @@ class DataLivrosController:
         leitor = self.db.buscar_leitor_por_id(leitor_id)
         
         if leitor:
-            msg = f"Nome: {leitor['nome']}\nEmail: {leitor['email']}\nTelefone: {leitor['telefone']}\nEndereço: {leitor['endereco']}"
+            turma_info = f"Turma: {leitor['turma']}" if leitor.get('turma') else "Turma: Não informada"
+            msg = f"Nome: {leitor['nome']}\n{turma_info}"
             wx.MessageBox(msg, "Detalhes do Leitor", wx.OK | wx.ICON_INFORMATION)
+    
+    def _on_editar_livro(self, event):
+        """Evento: Edita um livro selecionado da lista de busca."""
+        aba_cad = self.frame.get_aba_cadastro()
+        
+        selecionado = aba_cad.lista_resultados_api.GetSelection()
+        if selecionado == wx.NOT_FOUND:
+            self.frame.atualizar_status("Erro: Selecione um livro para editar.")
+            wx.Bell()
+            return
+        
+        # Obter livro da lista de resultados da API ou banco
+        if selecionado < len(self.livros_api_resultados):
+            livro = self.livros_api_resultados[selecionado]
+            livro_id = livro.get('id')
+            
+            # Se ainda não tem ID (resultado da API), buscar do banco ou usar None
+            if livro_id is None:
+                # Assumir que o livro precisa ser salvo antes de ser editado
+                self.frame.atualizar_status("Erro: Salve o livro antes de editar.")
+                return
+        else:
+            self.frame.atualizar_status("Erro: Livro não encontrado.")
+            wx.Bell()
+            return
+        
+        # Buscar dados completos do livro no banco
+        livro_completo = self.db.buscar_livro_por_id(livro_id)
+        if not livro_completo:
+            self.frame.atualizar_status(f"Erro: Livro com ID {livro_id} não encontrado no banco de dados.")
+            wx.Bell()
+            return
+        
+        # Preencher campos com os dados atuais
+        aba_cad.texto_titulo.SetValue(livro_completo.get('titulo', ''))
+        aba_cad.texto_isbn.SetValue(livro_completo.get('isbn', ''))
+        aba_cad.texto_autores.SetValue(', '.join(livro_completo.get('autores', [])) if livro_completo.get('autores') else '')
+        aba_cad.texto_editora.SetValue(livro_completo.get('editora', ''))
+        aba_cad.texto_ano.SetValue(str(livro_completo.get('ano_publicacao', '')))
+        aba_cad.texto_descricao.SetValue(livro_completo.get('descricao', ''))
+        aba_cad.texto_categorias.SetValue(', '.join(livro_completo.get('categorias', [])) if livro_completo.get('categorias') else '')
+        aba_cad.texto_quantidade.SetValue(livro_completo.get('quantidade_total', 1))
+        
+        # Marcar como modo de edição
+        self.editando_livro_id = livro_id
+        
+        # Mudar label do botão para "Atualizar"
+        aba_cad.btn_salvar.SetLabel("Atualizar Livro")
+        
+        # Mover foco para o título
+        aba_cad.texto_titulo.SetFocus()
+        
+        # Anunciar ao NVDA
+        titulo = livro_completo.get('titulo', 'Livro desconhecido')
+        self.frame.atualizar_status(f"Editando livro: {titulo}")
+    
+    def _on_editar_leitor(self, event):
+        """Evento: Edita um leitor selecionado na lista de leitores."""
+        aba_leit = self.frame.get_aba_leitores()
+        
+        selecionado = aba_leit.lista_leitores.GetSelection()
+        if selecionado == wx.NOT_FOUND:
+            self.frame.atualizar_status("Erro: Selecione um leitor para editar.")
+            wx.Bell()
+            return
+        
+        # Obter ID do leitor selecionado
+        leitor_id = aba_leit.lista_leitores.GetClientData(selecionado)
+        
+        # Buscar dados completos do leitor no banco
+        leitor = self.db.buscar_leitor_por_id(leitor_id)
+        if not leitor:
+            self.frame.atualizar_status(f"Erro: Leitor com ID {leitor_id} não encontrado no banco de dados.")
+            wx.Bell()
+            return
+        
+        # Preencher campos com os dados atuais
+        aba_leit.texto_nome.SetValue(leitor.get('nome', ''))
+        aba_leit.texto_turma.SetValue(leitor.get('turma', ''))
+        
+        # Marcar como modo de edição
+        self.editando_leitor_id = leitor_id
+        
+        # Mudar label do botão para "Atualizar"
+        aba_leit.btn_salvar_leitor.SetLabel("Atualizar Leitor")
+        
+        # Mover foco para o nome
+        aba_leit.texto_nome.SetFocus()
+        
+        # Anunciar ao NVDA
+        nome = leitor.get('nome', 'Leitor desconhecido')
+        self.frame.atualizar_status(f"Editando leitor: {nome}")
     
     # ========== EVENTOS DOS ATALHOS ==========
     

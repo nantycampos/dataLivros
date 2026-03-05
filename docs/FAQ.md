@@ -236,10 +236,10 @@ R: [Issues no GitHub](https://github.com/usuario/datalivros/issues)
 R: [Discussions no GitHub](https://github.com/usuario/datalivros/discussions)
 
 ### P: Há comunidade ou fórum?
-R: Não ainda, em consideração.
+R: Use Issues/Discussions no repositório GitHub.
 
-### P: Pode enviar email?
-R: Não há email de suporte ainda. Use Issues/Discussions.
+### P: Como reportar um bug ou sugerir melhorias?
+R: Abra uma Issue no repositório GitHub com detalhes claros.
 
 ## 🔗 Recursos Úteis
 

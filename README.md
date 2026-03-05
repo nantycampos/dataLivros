@@ -14,6 +14,8 @@ DataLivros é uma aplicação desktop para gerenciar acervos de leitura com foco
 - ✅ **100% acessível** - Compatível com NVDA (WCAG 2.1)
 - ✅ **Google Books API** - Auto-preenchimento inteligente de livros
 - ✅ **Gerenciamento completo** - Livros, leitores e empréstimos
+- ✅ **Controle de estoque** - Rastreamento por quantidade de exemplares
+- ✅ **Edição de dados** - Atualizar livros e leitores após cadastro
 - ✅ **Atalhos de teclado** - Navegação rápida (Ctrl+1/2/3, Ctrl+S, Ctrl+Q)
 - ✅ **Feedback auditivo** - StatusBar com anúncios para NVDA
 - ✅ **Sem complexidade** - Apenas wxPython, sem dependências extras
@@ -63,15 +65,31 @@ Adicione novos livros via Google Books.
 1. **Digite ISBN/título** na barra de busca
 2. **Revise os 10 resultados** na lista
 3. **Selecione um livro** para preencher formulário
-4. **Salve** no acervo (Ctrl+S)
+4. **Defina a quantidade** de exemplares (padrão: 1)
+5. **Salve** no acervo (Ctrl+S)
+
+**Editar um livro:**
+- Selecione um livro da lista de resultados
+- Clique em "Editar Selecionado"
+- O botão muda para "Atualizar Livro"
+- Modifique os dados necessários
+- Clique em "Atualizar Livro"
 
 ### Aba 3: Leitores 👥
 Gerencie cadastro de usuários.
 
 1. **Novo leitor** - Preencha nome (obrigatório)
-2. **Salve** o registro
-3. **Busque** por nome para filtrar
-4. **Veja detalhes** de um leitor registrado
+2. **Defina a turma** (opcional)
+3. **Salve** o registro
+4. **Busque** por nome para filtrar
+5. **Veja detalhes** de um leitor registrado
+
+**Editar um leitor:**
+- Selecione um leitor na lista
+- Clique em "Editar Selecionado"
+- O botão muda para "Atualizar Leitor"
+- Modifique nome ou turma
+- Clique em "Atualizar Leitor"
 
 ## ⌨️ Atalhos de Teclado
 

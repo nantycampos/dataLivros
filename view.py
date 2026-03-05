@@ -35,12 +35,21 @@ class CirculacaoPanel(wx.Panel):
         
         # Botão de busca
         self.btn_buscar_livro = wx.Button(self, label="Buscar Livro", name="btn_buscar_livro")
+        self.btn_buscar_livro.SetHelpText("Busca livros disponíveis no banco de dados")
         busca_livro_sizer.Add(self.btn_buscar_livro, flag=wx.EXPAND)
         busca_livro_sizer.Add((0, 10))
         
-        main_sizer.Add(busca_livro_sizer, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
+        # Label para lista de resultados
+        self.label_resultados_livro = wx.StaticText(self, label="Resultados da Busca:")
+        busca_livro_sizer.Add(self.label_resultados_livro)
         
-        # --- SEÇÃO DE SELEÇÃO DE LEITOR ---
+        # ListBox para resultados de busca de livros
+        self.lista_resultados_livro = wx.ListBox(self, name="lista_resultados_livro")
+        self.lista_resultados_livro.SetHelpText("Resultados da busca de livros, use as setas para selecionar")
+        busca_livro_sizer.Add(self.lista_resultados_livro, proportion=1, flag=wx.EXPAND)
+        busca_livro_sizer.Add((0, 10))
+        
+        main_sizer.Add(busca_livro_sizer, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
         busca_leitor_box = wx.StaticBox(self, label="Seleção de Leitor")
         busca_leitor_sizer = wx.StaticBoxSizer(busca_leitor_box, wx.VERTICAL)
         busca_leitor_sizer.Add((0, 5))
@@ -74,9 +83,11 @@ class CirculacaoPanel(wx.Panel):
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         
         self.btn_emprestar = wx.Button(self, label="Registrar Empréstimo", name="btn_emprestar")
+        self.btn_emprestar.SetHelpText("Registra um novo empréstimo de um livro para um leitor")
         btn_sizer.Add(self.btn_emprestar, proportion=1, flag=wx.EXPAND | wx.RIGHT, border=5)
         
         self.btn_devolver = wx.Button(self, label="Registrar Devolução", name="btn_devolver")
+        self.btn_devolver.SetHelpText("Registra a devolução de um livro emprestado")
         btn_sizer.Add(self.btn_devolver, proportion=1, flag=wx.EXPAND)
         
         acao_sizer.Add(btn_sizer, flag=wx.EXPAND)
@@ -127,6 +138,7 @@ class CadastroPanel(wx.Panel):
         
         # Botão de busca na API
         self.btn_buscar_api = wx.Button(self, label="Buscar na API", name="btn_buscar_api")
+        self.btn_buscar_api.SetHelpText("Busca livros na Google Books API")
         busca_api_sizer.Add(self.btn_buscar_api, flag=wx.EXPAND)
         busca_api_sizer.Add((0, 10))
         
@@ -202,6 +214,14 @@ class CadastroPanel(wx.Panel):
         self.texto_categorias = wx.TextCtrl(self, name="categorias")
         self.texto_categorias.SetHelpText("Categorias separadas por vírgula")
         dados_sizer.Add(self.texto_categorias, flag=wx.EXPAND)
+        dados_sizer.Add((0, 5))
+        
+        # Quantidade Total
+        self.label_quantidade = wx.StaticText(self, label="Quantidade:")
+        dados_sizer.Add(self.label_quantidade)
+        self.texto_quantidade = wx.SpinCtrl(self, value='1', min=1, max=1000, name="quantidade_total")
+        self.texto_quantidade.SetHelpText("Quantidade total de exemplares (padrão 1)")
+        dados_sizer.Add(self.texto_quantidade, flag=wx.EXPAND)
         dados_sizer.Add((0, 10))
         
         main_sizer.Add(dados_sizer, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
@@ -210,9 +230,15 @@ class CadastroPanel(wx.Panel):
         botoes_sizer = wx.BoxSizer(wx.HORIZONTAL)
         
         self.btn_salvar = wx.Button(self, label="Salvar Livro", name="btn_salvar")
+        self.btn_salvar.SetHelpText("Salva um novo livro ou atualiza o livro selecionado")
         botoes_sizer.Add(self.btn_salvar, proportion=1, flag=wx.EXPAND | wx.RIGHT, border=5)
         
+        self.btn_editar = wx.Button(self, label="Editar Selecionado", name="btn_editar")
+        self.btn_editar.SetHelpText("Carrega o livro selecionado para edição")
+        botoes_sizer.Add(self.btn_editar, proportion=1, flag=wx.EXPAND | wx.RIGHT, border=5)
+        
         self.btn_limpar = wx.Button(self, label="Limpar Campos", name="btn_limpar")
+        self.btn_limpar.SetHelpText("Limpa todos os campos e cancela edição")
         botoes_sizer.Add(self.btn_limpar, proportion=1, flag=wx.EXPAND)
         
         main_sizer.Add(botoes_sizer, flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, border=10)
@@ -245,32 +271,17 @@ class LeitoresPanel(wx.Panel):
         novo_leitor_sizer.Add(self.texto_nome, flag=wx.EXPAND)
         novo_leitor_sizer.Add((0, 5))
         
-        # Email
-        self.label_email = wx.StaticText(self, label="Email:")
-        novo_leitor_sizer.Add(self.label_email)
-        self.texto_email = wx.TextCtrl(self, name="email")
-        self.texto_email.SetHelpText("Email do leitor")
-        novo_leitor_sizer.Add(self.texto_email, flag=wx.EXPAND)
-        novo_leitor_sizer.Add((0, 5))
-        
-        # Telefone
-        self.label_telefone = wx.StaticText(self, label="Telefone:")
-        novo_leitor_sizer.Add(self.label_telefone)
-        self.texto_telefone = wx.TextCtrl(self, name="telefone")
-        self.texto_telefone.SetHelpText("Telefone do leitor com DDD")
-        novo_leitor_sizer.Add(self.texto_telefone, flag=wx.EXPAND)
-        novo_leitor_sizer.Add((0, 5))
-        
-        # Endereço
-        self.label_endereco = wx.StaticText(self, label="Endereço:")
-        novo_leitor_sizer.Add(self.label_endereco)
-        self.texto_endereco = wx.TextCtrl(self, name="endereco")
-        self.texto_endereco.SetHelpText("Endereço completo do leitor")
-        novo_leitor_sizer.Add(self.texto_endereco, flag=wx.EXPAND)
+        # Turma
+        self.label_turma = wx.StaticText(self, label="Turma:")
+        novo_leitor_sizer.Add(self.label_turma)
+        self.texto_turma = wx.TextCtrl(self, name="turma")
+        self.texto_turma.SetHelpText("Turma do leitor (opcional)")
+        novo_leitor_sizer.Add(self.texto_turma, flag=wx.EXPAND)
         novo_leitor_sizer.Add((0, 10))
         
         # Botão salvar leitor
         self.btn_salvar_leitor = wx.Button(self, label="Salvar Leitor", name="btn_salvar_leitor")
+        self.btn_salvar_leitor.SetHelpText("Salva um novo leitor ou atualiza o leitor selecionado")
         novo_leitor_sizer.Add(self.btn_salvar_leitor, flag=wx.EXPAND)
         novo_leitor_sizer.Add((0, 10))
         
@@ -296,9 +307,18 @@ class LeitoresPanel(wx.Panel):
         lista_sizer.Add(self.lista_leitores, proportion=1, flag=wx.EXPAND)
         lista_sizer.Add((0, 5))
         
-        # Botão de detalhes
+        # Botões de ação
+        botoes_leitores_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        
+        self.btn_editar_leitor = wx.Button(self, label="Editar Selecionado", name="btn_editar_leitor")
+        self.btn_editar_leitor.SetHelpText("Carrega o leitor selecionado para edição")
+        botoes_leitores_sizer.Add(self.btn_editar_leitor, proportion=1, flag=wx.EXPAND | wx.RIGHT, border=5)
+        
         self.btn_detalhes_leitor = wx.Button(self, label="Ver Detalhes", name="btn_detalhes_leitor")
-        lista_sizer.Add(self.btn_detalhes_leitor, flag=wx.EXPAND)
+        self.btn_detalhes_leitor.SetHelpText("Exibe detalhes completos do leitor selecionado")
+        botoes_leitores_sizer.Add(self.btn_detalhes_leitor, proportion=1, flag=wx.EXPAND)
+        
+        lista_sizer.Add(botoes_leitores_sizer, flag=wx.EXPAND)
         lista_sizer.Add((0, 10))
         
         main_sizer.Add(lista_sizer, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, border=10)

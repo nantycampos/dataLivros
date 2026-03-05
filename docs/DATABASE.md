@@ -34,9 +34,7 @@ CREATE TABLE livros (
 CREATE TABLE leitores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nome TEXT NOT NULL,
-    email TEXT UNIQUE,
-    telefone TEXT,
-    endereco TEXT,
+    turma TEXT,
     data_inscricao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ativo BOOLEAN DEFAULT 1
@@ -167,7 +165,6 @@ CREATE TABLE emprestimos (
 
 - `PRIMARY KEY` - Identificadores únicos
 - `UNIQUE (isbn)` - ISBN não se repete
-- `UNIQUE (email)` - Email não se repete
 - `FOREIGN KEY` - Integridade referencial
 - `NOT NULL` - Campos obrigatórios
 

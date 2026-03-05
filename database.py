@@ -49,6 +49,8 @@ class DatabaseGerenciador:
                     descricao TEXT,
                     categorias TEXT,
                     thumbnail TEXT,
+                    quantidade_total INTEGER DEFAULT 1,
+                    status TEXT DEFAULT 'Disponível',
                     data_adicao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -59,9 +61,7 @@ class DatabaseGerenciador:
                 CREATE TABLE IF NOT EXISTS leitores (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     nome TEXT NOT NULL,
-                    email TEXT UNIQUE,
-                    telefone TEXT,
-                    endereco TEXT,
+                    turma TEXT,
                     data_inscricao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     ativo BOOLEAN DEFAULT 1
@@ -94,7 +94,8 @@ class DatabaseGerenciador:
     def adicionar_livro(self, titulo: str, isbn: Optional[str] = None, 
                        autores: Optional[str] = None, editora: Optional[str] = None,
                        ano_publicacao: Optional[int] = None, descricao: Optional[str] = None,
-                       categorias: Optional[str] = None, thumbnail: Optional[str] = None) -> int:
+                       categorias: Optional[str] = None, thumbnail: Optional[str] = None,
+                       quantidade_total: int = 1) -> int:
         """
         Adiciona um novo livro ao banco de dados.
         
@@ -107,16 +108,17 @@ class DatabaseGerenciador:
             descricao: Descrição do livro
             categorias: Categorias separadas por vírgula
             thumbnail: URL da capa
+            quantidade_total: Quantidade total de exemplares (padrão 1)
             
-        Returns:
-            ID do livro inserido
+            Returns:
+                ID do livro inserido
         """
         try:
             self.cursor.execute('''
                 INSERT INTO livros 
-                (titulo, isbn, autores, editora, ano_publicacao, descricao, categorias, thumbnail)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (titulo, isbn, autores, editora, ano_publicacao, descricao, categorias, thumbnail))
+                (titulo, isbn, autores, editora, ano_publicacao, descricao, categorias, thumbnail, quantidade_total)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (titulo, isbn, autores, editora, ano_publicacao, descricao, categorias, thumbnail, quantidade_total))
             
             self.conexao.commit()
             livro_id = self.cursor.lastrowid
@@ -200,14 +202,14 @@ class DatabaseGerenciador:
         
         Args:
             livro_id: ID do livro
-            **kwargs: Campos a atualizar (titulo, autores, etc)
+            **kwargs: Campos a atualizar (titulo, autores, status, quantidade_total, etc)
             
         Returns:
             True se atualizado com sucesso
         """
         try:
             campos_validos = {'titulo', 'isbn', 'autores', 'editora', 'ano_publicacao', 
-                             'descricao', 'categorias', 'thumbnail'}
+                             'descricao', 'categorias', 'thumbnail', 'status', 'quantidade_total'}
             campos_atualizacao = {k: v for k, v in kwargs.items() if k in campos_validos}
             
             if not campos_atualizacao:
@@ -243,25 +245,22 @@ class DatabaseGerenciador:
     
     # ========== OPERAÇÕES COM LEITORES ==========
     
-    def adicionar_leitor(self, nome: str, email: Optional[str] = None,
-                        telefone: Optional[str] = None, endereco: Optional[str] = None) -> int:
+    def adicionar_leitor(self, nome: str, turma: Optional[str] = None) -> int:
         """
         Adiciona um novo leitor.
         
         Args:
             nome: Nome do leitor (obrigatório)
-            email: Email do leitor
-            telefone: Telefone do leitor
-            endereco: Endereço do leitor
+            turma: Turma do leitor
             
         Returns:
             ID do leitor inserido
         """
         try:
             self.cursor.execute('''
-                INSERT INTO leitores (nome, email, telefone, endereco)
-                VALUES (?, ?, ?, ?)
-            ''', (nome, email, telefone, endereco))
+                INSERT INTO leitores (nome, turma)
+                VALUES (?, ?)
+            ''', (nome, turma))
             
             self.conexao.commit()
             leitor_id = self.cursor.lastrowid
@@ -335,13 +334,13 @@ class DatabaseGerenciador:
         
         Args:
             leitor_id: ID do leitor
-            **kwargs: Campos a atualizar (nome, email, telefone, endereco, ativo)
+            **kwargs: Campos a atualizar (nome, turma, ativo)
             
         Returns:
             True se atualizado com sucesso
         """
         try:
-            campos_validos = {'nome', 'email', 'telefone', 'endereco', 'ativo'}
+            campos_validos = {'nome', 'turma', 'ativo'}
             campos_atualizacao = {k: v for k, v in kwargs.items() if k in campos_validos}
             
             if not campos_atualizacao:
@@ -382,11 +381,39 @@ class DatabaseGerenciador:
                 VALUES (?, ?, ?, ?, 'ativo')
             ''', (livro_id, leitor_id, data_devolucao_prevista, observacoes))
             
-            self.conexao.commit()
             emprestimo_id = self.cursor.lastrowid
+            
+            # Atualizar status do livro para Emprestado
+            self.cursor.execute('''
+                UPDATE livros
+                SET status = 'Emprestado'
+                WHERE id = ?
+            ''', (livro_id,))
+            
+            self.conexao.commit()
             return emprestimo_id
         except sqlite3.Error:
             raise
+    
+    def contar_emprestimos_ativos_livro(self, livro_id: int) -> int:
+        """
+        Conta quantos exemplares de um livro estão ativos (emprestados).
+        
+        Args:
+            livro_id: ID do livro
+            
+        Returns:
+            Número de empréstimos ativos para este livro
+        """
+        try:
+            self.cursor.execute(
+                'SELECT COUNT(*) FROM emprestimos WHERE livro_id = ? AND status = "ativo"',
+                (livro_id,)
+            )
+            resultado = self.cursor.fetchone()
+            return resultado[0] if resultado else 0
+        except sqlite3.Error:
+            return 0
     
     def buscar_emprestimo_por_id(self, emprestimo_id: int) -> Optional[dict]:
         """
@@ -446,11 +473,27 @@ class DatabaseGerenciador:
             if not data_devolucao_real:
                 data_devolucao_real = datetime.now().isoformat()
             
+            # Obter ID do livro antes de atualizar o empréstimo
+            self.cursor.execute('SELECT livro_id FROM emprestimos WHERE id = ?', (emprestimo_id,))
+            resultado = self.cursor.fetchone()
+            if not resultado:
+                return False
+            
+            livro_id = resultado[0]
+            
+            # Atualizar empréstimo
             self.cursor.execute('''
                 UPDATE emprestimos 
                 SET data_devolucao_real = ?, status = 'finalizado'
                 WHERE id = ?
             ''', (data_devolucao_real, emprestimo_id))
+            
+            # Atualizar status do livro para Disponível
+            self.cursor.execute('''
+                UPDATE livros
+                SET status = 'Disponível'
+                WHERE id = ?
+            ''', (livro_id,))
             
             self.conexao.commit()
             return self.cursor.rowcount > 0
