@@ -287,20 +287,20 @@ class DatabaseGerenciador:
         except sqlite3.Error:
             return None
     
-    def buscar_leitores_por_nome(self, nome: str) -> List[dict]:
+    def buscar_leitores_por_nome_ou_turma(self, termo: str) -> List[dict]:
         """
-        Busca leitores por nome (busca parcial).
+        Busca leitores por nome OU turma (busca parcial em ambos os campos).
         
         Args:
-            nome: Nome ou parte do nome
+            termo: Nome ou parte do nome, ou turma ou parte da turma
             
         Returns:
-            Lista de dicionários com dados dos leitores
+            Lista de dicionários com dados dos leitores ordenados por nome
         """
         try:
             self.cursor.execute(
-                'SELECT * FROM leitores WHERE nome LIKE ? AND ativo = 1 ORDER BY nome',
-                (f'%{nome}%',)
+                'SELECT * FROM leitores WHERE (nome LIKE ? OR turma LIKE ?) AND ativo = 1 ORDER BY nome',
+                (f'%{termo}%', f'%{termo}%')
             )
             resultados = self.cursor.fetchall()
             return [dict(row) for row in resultados]
@@ -382,14 +382,6 @@ class DatabaseGerenciador:
             ''', (livro_id, leitor_id, data_devolucao_prevista, observacoes))
             
             emprestimo_id = self.cursor.lastrowid
-            
-            # Atualizar status do livro para Emprestado
-            self.cursor.execute('''
-                UPDATE livros
-                SET status = 'Emprestado'
-                WHERE id = ?
-            ''', (livro_id,))
-            
             self.conexao.commit()
             return emprestimo_id
         except sqlite3.Error:
@@ -487,13 +479,6 @@ class DatabaseGerenciador:
                 SET data_devolucao_real = ?, status = 'finalizado'
                 WHERE id = ?
             ''', (data_devolucao_real, emprestimo_id))
-            
-            # Atualizar status do livro para Disponível
-            self.cursor.execute('''
-                UPDATE livros
-                SET status = 'Disponível'
-                WHERE id = ?
-            ''', (livro_id,))
             
             self.conexao.commit()
             return self.cursor.rowcount > 0

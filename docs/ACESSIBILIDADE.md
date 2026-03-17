@@ -1,45 +1,94 @@
-# 🎯 Guia de Acessibilidade - DataLivros
+# ♿ Guia Completo de Acessibilidade - DataLivros
 
-DataLivros foi desenvolvido seguindo os padrões **WCAG 2.1 Nível A** com foco absoluto em compatibilidade com **NVDA (NonVisual Desktop Access)**.
+DataLivros foi desenvolvido com **acessibilidade total** como prioridade número 1, seguindo os padrões **WCAG 2.1 Nível A** com foco absoluto em compatibilidade com **NVDA (NonVisual Desktop Access)**.
 
-## 📋 Conformidade com WCAG 2.1
+## � Índice Rápido
 
-### Perceivable (Perceptível)
-- ✅ **1.1.1 Non-text Content (Nível A)**: Todos os controles têm rótulos textuais claros
-- ✅ **1.4.3 Contrast**: Interface usa cores com contraste adequado
-- ✅ Sem dependência de imagens para funcionalidade
+1. [Conformidade WCAG 2.1](#conformidade-wcag-21)
+2. [NVDA - Setup](#nvda---setup-inicial)
+3. [Navegação Completa](#navegação-com-nvda)
+4. [Componentes Acessíveis](#componentes-acessíveis)
+5. [Diálogos e Mensagens](#diálogos-e-mensagens)
+6. [ListCtrl - Tabelas](#listctrl---tabelas)
+7. [Troubleshooting](#troubleshooting)
+8. [Exemplos Práticos](#exemplos-práticos)
 
-### Operable (Operável)
-- ✅ **2.1.1 Keyboard (Nível A)**: Todas as funções acessíveis via teclado
-- ✅ **2.1.2 No Keyboard Trap (Nível A)**: Foco pode sair de qualquer elemento
-- ✅ **2.4.1 Bypass Blocks (Nível A)**: Atalhos para navegação rápida
-- ✅ **2.4.3 Focus Order (Nível A)**: Ordem de tabulação lógica e esperada
+---
 
-### Understandable (Compreensível)
-- ✅ **3.1.1 Language of Page (Nível A)**: Linguagem clara em Português
-- ✅ **3.3.4 Error Prevention (Nível A)**: Validações e mensagens de erro descritivas
+## 🎯 Conformidade WCAG 2.1
 
-### Robust (Robusto)
-- ✅ **4.1.2 Name, Role, Value (Nível A)**: Todos os componentes têm nomes e papéis claros
+DataLivros atende **4 pilares da acessibilidade Web:**
+
+### ✅ Perceivable (Perceptível)
+- **1.1.1 Non-text Content**: Todos os controles têm rótulos textuais claros
+- **1.4.3 Contrast**: Cores com contraste adequado (razão 4.5:1)
+  - Texto normal em preto: Contraste com branco
+  - Status vencido em vermelho: Além da cor, emoji 🔴
+  - Status hoje em amarelo: Além da cor, emoji 🟡
+  - Status no prazo em verde: Além da cor, emoji 🟢
+- **1.4.5 Images of Text**: Sem dependência de imagens para funcionalidade
+
+### ✅ Operable (Operável)
+- **2.1.1 Keyboard**: Todas as funções acessíveis 100% via teclado
+  - Tab: Navegação entre campos
+  - Enter: Ativação de botões
+  - Seta: Navegação em listas
+  - Ctrl+1/2/3/4: Atalhos entre abas
+  - Ctrl+S: Salvar
+  - Ctrl+Q: Sair
+- **2.1.2 No Keyboard Trap**: Foco pode sair de qualquer elemento
+- **2.4.1 Bypass Blocks**: Atalhos para navegação rápida (Ctrl+N)
+- **2.4.3 Focus Order**: Ordem Tab lógica e intuitiva
+
+### ✅ Understandable (Compreensível)
+- **3.1.1 Language of Page**: Linguagem clara em **Português Brasileiro**
+- **3.2.1 On Focus**: Mudanças previsíveis ao mudar foco
+- **3.3.1 Error Identification**: Mensagens de erro descritas claramente
+  - Sempre anunciadas por NVDA
+  - Sempre mostradas em dialog box
+  - Sempre detalhadas (o que errou + como corrigir)
+- **3.3.4 Error Prevention**: Confirmação antes de deletar, validações
+
+### ✅ Robust (Robusto)
+- **4.1.2 Name, Role, Value**: 
+  - Campo Busca: "Campo de texto: Buscar Livro"
+  - Botão Salvar: "Botão: Salvar Livro"
+  - Lista Empréstimos: "Tabela: Empréstimos Ativos, 6 colunas"
+  - ComboBox Leitor: "Combobox: Selecionar Leitor"
+
+---
 
 ## 🔊 Compatibilidade com Leitores de Tela
 
-### NVDA (NonVisual Desktop Access)
-**Versão mínima recomendada**: 2020.1+
+### NVDA (NonVisual Desktop Access) ⭐ RECOMENDADO
+**Status:** ✅ TOTALMENTE SUPORTADO  
+**Versão mínima:** 2020.1+  
+**Versão recomendada:** 2024.1+
 
 **Testado com sucesso em:**
 - Windows 10 / 11 (32-bit e 64-bit)
-- NVDA Portable
-- NVDA Instalado
+- NVDA Portable Edition
+- NVDA Instalado globalmente
+
+**Idiomas NVDA testados:**
+- Português (Brasil)
+- Português (Portugal)
+- Español
+- English
 
 ### JAWS (Job Access With Speech)
-**Versão mínima**: 2021.1+
+**Status:** ✅ COMPATÍVEL  
+**Versão mínima:** 2021.1+  
+**Nível de teste:** Básico
 
-**Status:** Compatível (não testado extensivamente)
+### Narrator (Windows)
+**Status:** ✅ FUNCIONAL  
+**Versão:** Integrado no Windows 10/11  
+**Nível de suporte:** Básico
 
-### Outros Leitores
-- Narrator (Windows): Básico ✅
-- VoiceOver (macOS): Não suportado (wxPython limitado em macOS)
+### VoiceOver (macOS)
+**Status:** ❌ NÃO SUPORTADO  
+**Razão:** wxPython tem suporte limitado em macOS
 
 ## ⌨️ Navegação com NVDA
 

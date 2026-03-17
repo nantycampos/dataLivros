@@ -100,8 +100,18 @@ class CirculacaoPanel(wx.Panel):
         ativos_sizer = wx.StaticBoxSizer(ativos_box, wx.VERTICAL)
         ativos_sizer.Add((0, 5))
         
-        self.lista_emprestimos = wx.ListBox(self, name="lista_emprestimos")
-        self.lista_emprestimos.SetHelpText("Lista de empréstimos ativos")
+        # ListCtrl em modo Report (tabela) para empréstimos
+        self.lista_emprestimos = wx.ListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL, 
+                                             name="lista_emprestimos")
+        self.lista_emprestimos.SetHelpText("Lista de empréstimos ativos. Use as setas para navegar.")
+        
+        # Adicionar colunas (ID armazenado internamente via SetItemData, não exibido)
+        self.lista_emprestimos.AppendColumn("Livro", width=170)
+        self.lista_emprestimos.AppendColumn("Leitor", width=140)
+        self.lista_emprestimos.AppendColumn("Data Empréstimo", width=130)
+        self.lista_emprestimos.AppendColumn("Data Devolução Prevista", width=160)
+        self.lista_emprestimos.AppendColumn("Status", width=100)
+        
         ativos_sizer.Add(self.lista_emprestimos, proportion=1, flag=wx.EXPAND)
         ativos_sizer.Add((0, 10))
         
@@ -246,6 +256,122 @@ class CadastroPanel(wx.Panel):
         self.SetSizer(main_sizer)
 
 
+class CatalogoPanel(wx.Panel):
+    """Painel para visualização e gerenciamento do catálogo de livros."""
+    
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.InitUI()
+    
+    def InitUI(self):
+        """Inicializa os componentes da interface."""
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        main_sizer.Add((0, 10))  # Espaçamento superior
+        
+        # --- SEÇÃO DE BUSCA ---
+        busca_box = wx.StaticBox(self, label="Busca de Livros")
+        busca_sizer = wx.StaticBoxSizer(busca_box, wx.VERTICAL)
+        busca_sizer.Add((0, 5))
+        
+        # Label e campo de busca
+        self.label_busca_catalogo = wx.StaticText(self, label="Buscar por Título ou ISBN:")
+        busca_sizer.Add(self.label_busca_catalogo)
+        
+        self.texto_busca_catalogo = wx.TextCtrl(self, name="busca_catalogo")
+        self.texto_busca_catalogo.SetHelpText("Digite título ou ISBN para filtrar livros")
+        busca_sizer.Add(self.texto_busca_catalogo, flag=wx.EXPAND)
+        busca_sizer.Add((0, 10))
+        
+        main_sizer.Add(busca_sizer, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
+        
+        # --- SEÇÃO DE LISTA DE LIVROS ---
+        lista_box = wx.StaticBox(self, label="Catálogo de Livros")
+        lista_sizer = wx.StaticBoxSizer(lista_box, wx.VERTICAL)
+        lista_sizer.Add((0, 5))
+        
+        # ListCtrl em modo Report (tabela)
+        self.lista_catalogo = wx.ListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL, 
+                                          name="lista_catalogo")
+        self.lista_catalogo.SetHelpText("Lista de todos os livros cadastrados. Use as setas para navegar.")
+        
+        # Adicionar colunas (ID armazenado internamente via SetItemData, não exibido)
+        self.lista_catalogo.AppendColumn("Título", width=220)
+        self.lista_catalogo.AppendColumn("Autor", width=160)
+        self.lista_catalogo.AppendColumn("ISBN", width=110)
+        self.lista_catalogo.AppendColumn("Editora", width=130)
+        self.lista_catalogo.AppendColumn("Quantidade", width=90)
+        
+        lista_sizer.Add(self.lista_catalogo, proportion=1, flag=wx.EXPAND)
+        lista_sizer.Add((0, 10))
+        
+        # --- SEÇÃO DE BOTÕES DE AÇÃO ---
+        botoes_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        
+        self.btn_editar_catalogo = wx.Button(self, label="Editar Quantidade", 
+                                             name="btn_editar_catalogo")
+        self.btn_editar_catalogo.SetHelpText("Edita a quantidade do livro selecionado")
+        botoes_sizer.Add(self.btn_editar_catalogo, proportion=1, flag=wx.EXPAND | wx.RIGHT, border=5)
+        
+        self.btn_editar_detalhes = wx.Button(self, label="Editar Detalhes", 
+                                             name="btn_editar_detalhes")
+        self.btn_editar_detalhes.SetHelpText("Edita todos os dados do livro selecionado")
+        botoes_sizer.Add(self.btn_editar_detalhes, proportion=1, flag=wx.EXPAND | wx.RIGHT, border=5)
+        
+        self.btn_deletar_catalogo = wx.Button(self, label="Deletar Livro", 
+                                              name="btn_deletar_catalogo")
+        self.btn_deletar_catalogo.SetHelpText("Deleta o livro selecionado do banco de dados")
+        botoes_sizer.Add(self.btn_deletar_catalogo, proportion=1, flag=wx.EXPAND)
+        
+        lista_sizer.Add(botoes_sizer, flag=wx.EXPAND)
+        lista_sizer.Add((0, 10))
+        
+        main_sizer.Add(lista_sizer, proportion=1, flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, border=10)
+        
+        self.SetSizer(main_sizer)
+    
+    def adicionar_livro_lista(self, livro_id: int, isbn: str, titulo: str, 
+                             autores: str, editora: str, quantidade: int):
+        """
+        Adiciona um livro à lista do catálogo.
+        
+        Args:
+            livro_id: ID do livro
+            isbn: ISBN do livro
+            titulo: Título do livro
+            autores: Autores do livro
+            editora: Editora do livro
+            quantidade: Quantidade de exemplares
+        """
+        indice = self.lista_catalogo.InsertItem(self.lista_catalogo.GetItemCount(), titulo)
+        self.lista_catalogo.SetItem(indice, 1, autores or "")
+        self.lista_catalogo.SetItem(indice, 2, isbn or "")
+        self.lista_catalogo.SetItem(indice, 3, editora or "")
+        self.lista_catalogo.SetItem(indice, 4, str(quantidade))
+        self.lista_catalogo.SetItemData(indice, livro_id)  # Armazenar ID para referência
+    
+    def limpar_lista(self):
+        """Limpa a lista de livros."""
+        self.lista_catalogo.DeleteAllItems()
+    
+    def obter_livro_selecionado(self) -> Optional[int]:
+        """
+        Obtém o ID do livro selecionado.
+        
+        Returns:
+            ID do livro ou None se nenhum estiver selecionado
+        """
+        indice = self.lista_catalogo.GetFirstSelected()
+        if indice != -1:
+            return self.lista_catalogo.GetItemData(indice)
+        return None
+    
+    def remover_livro_selecionado(self):
+        """Remove o livro selecionado da lista."""
+        indice = self.lista_catalogo.GetFirstSelected()
+        if indice != -1:
+            self.lista_catalogo.DeleteItem(indice)
+
+
 class LeitoresPanel(wx.Panel):
     """Painel para gerenciamento de leitores."""
     
@@ -349,11 +475,13 @@ class MainFrame(wx.Frame):
         # Criar painéis das abas
         self.aba_circulacao = CirculacaoPanel(self.notebook)
         self.aba_cadastro = CadastroPanel(self.notebook)
+        self.aba_catalogo = CatalogoPanel(self.notebook)
         self.aba_leitores = LeitoresPanel(self.notebook)
         
         # Adicionar abas ao notebook
         self.notebook.AddPage(self.aba_circulacao, "Circulação")
         self.notebook.AddPage(self.aba_cadastro, "Cadastro de Livros")
+        self.notebook.AddPage(self.aba_catalogo, "Catálogo")
         self.notebook.AddPage(self.aba_leitores, "Leitores")
         
         sizer_principal.Add(self.notebook, proportion=1, flag=wx.EXPAND)
@@ -361,7 +489,7 @@ class MainFrame(wx.Frame):
         
         # Criar StatusBar para feedback
         self.CreateStatusBar()
-        self.SetStatusText("Pronto para uso. Acesse Ctrl+1 para Circulação, Ctrl+2 para Cadastro, Ctrl+3 para Leitores")
+        self.SetStatusText("Pronto para uso. Acesse Ctrl+1 para Circulação, Ctrl+2 para Cadastro, Ctrl+3 para Catálogo, Ctrl+4 para Leitores")
         
         # Configurar AcceleratorTable para atalhos
         self._config_atalhos()
@@ -371,12 +499,14 @@ class MainFrame(wx.Frame):
         # Criar IDs únicos para cada atalho
         self.id_aba_circulacao = wx.NewIdRef()
         self.id_aba_cadastro = wx.NewIdRef()
+        self.id_aba_catalogo = wx.NewIdRef()
         self.id_aba_leitores = wx.NewIdRef()
         
         acel_entries = [
             (wx.ACCEL_CTRL, ord('1'), self.id_aba_circulacao),
             (wx.ACCEL_CTRL, ord('2'), self.id_aba_cadastro),
-            (wx.ACCEL_CTRL, ord('3'), self.id_aba_leitores),
+            (wx.ACCEL_CTRL, ord('3'), self.id_aba_catalogo),
+            (wx.ACCEL_CTRL, ord('4'), self.id_aba_leitores),
             (wx.ACCEL_CTRL, ord('S'), wx.ID_SAVE),
             (wx.ACCEL_CTRL, ord('Q'), wx.ID_EXIT),
         ]
@@ -394,6 +524,15 @@ class MainFrame(wx.Frame):
         self.SetStatusText(mensagem)
         # O NVDA lerá automaticamente a StatusBar quando ela for atualizada
     
+    def bind_evento_cambio_aba(self, handler):
+        """
+        Vincula um handler ao evento de mudança de aba.
+        
+        Args:
+            handler: Função a chamar quando a aba mudar
+        """
+        self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, handler)
+    
     def get_aba_circulacao(self) -> CirculacaoPanel:
         """Retorna a aba de circulação."""
         return self.aba_circulacao
@@ -401,6 +540,10 @@ class MainFrame(wx.Frame):
     def get_aba_cadastro(self) -> CadastroPanel:
         """Retorna a aba de cadastro."""
         return self.aba_cadastro
+    
+    def get_aba_catalogo(self) -> CatalogoPanel:
+        """Retorna a aba de catálogo."""
+        return self.aba_catalogo
     
     def get_aba_leitores(self) -> LeitoresPanel:
         """Retorna a aba de leitores."""
@@ -411,11 +554,11 @@ class MainFrame(wx.Frame):
         Navega para uma aba específica.
         
         Args:
-            indice: Índice da aba (0, 1, ou 2)
+            indice: Índice da aba (0, 1, 2, ou 3)
         """
         if 0 <= indice < self.notebook.GetPageCount():
             self.notebook.SetSelection(indice)
-            nomes_abas = ["Circulação", "Cadastro de Livros", "Leitores"]
+            nomes_abas = ["Circulação", "Cadastro de Livros", "Catálogo", "Leitores"]
             self.atualizar_status(f"Navegando para aba: {nomes_abas[indice]}")
     
     def vincular_evento(self, controle: wx.Window, evento: str, handler: Callable):

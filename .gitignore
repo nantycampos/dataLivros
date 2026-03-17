@@ -69,9 +69,13 @@ Thumbs.db
 .DS_Store
 
 # Arquivos de configuração sensíveis
+# NUNCA faça commit de .env com credenciais reais!
 .env
 .env.local
 .env.*.local
+.env*.local
+config/secrets.json
+
 
 # Distribuições
 dist/
